@@ -16,10 +16,8 @@ const CONNECT_TIMEOUT: Duration = Duration::from_millis(500);
 const DISPLAY_PORT_OFFSET: u16 = 6000;
 
 fn get_host_ip() -> Result<String> {
-    let resolvconf = std::fs::read("/etc/resolv.conf").context("failed to open /etc/resolv.conf")?;
-    let resolvconf = String::from_utf8(resolvconf).context("/etc/resolv.conf isn't valid utf8")?;
-
-    resolvconf
+    String::from_utf8(std::fs::read("/etc/resolv.conf").context("failed to read /etc/resolv.conf")?)
+        .context("/etc/resolv.conf isn't valid utf8")?
         .lines()
         .find_map(|line| {
             let mut words = line.split_ascii_whitespace();
