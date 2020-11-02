@@ -5,5 +5,5 @@ authors = ["Allen Wild <allenwild93@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.32"
-clap = { version = "2.33.1", default-features = false }
+anyhow = "1.0"
+getopts = "0.2"
