@@ -10,7 +10,7 @@ use std::process::exit;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
-use getopts::Options;
+use clap::{crate_version, App, Arg};
 
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(500);
 const DISPLAY_PORT_OFFSET: u16 = 6000;
@@ -37,27 +37,28 @@ fn connect_error_ok(e: &io::Error) -> bool {
 }
 
 fn real_main() -> Result<Option<String>> {
-    let mut opts = Options::new();
-    opts.optopt("d", "display-num", "X display offset", "OFFSET");
-    opts.optflag("h", "help", "print this help text");
+    // bleh, I didn't want to have to pull in clap, but at least I turned off all the features
+    let args = App::new("wsl2-get-display")
+        .version(crate_version!())
+        .max_term_width(80)
+        .arg(
+            Arg::with_name("display_num")
+                .short("d")
+                .long("display-offset")
+                .takes_value(true)
+                .default_value("1")
+                .help("X display offset"),
+        )
+        .get_matches();
 
-    let matches = opts.parse(env::args_os().skip(1))?;
-    if matches.opt_present("h") {
-        println!("{}", opts.usage("Usage: wsl2-get-display [OPTIONS]"));
-        return Ok(None);
-    }
-
-    let display_num = match matches.opt_str("d") {
-        Some(s) => s.parse::<u16>().context("invalid display number")?,
-        None => 1,
-    };
+    // parse and validate display number. safe to unwrap because there's a default value
+    let display_num =
+        args.value_of("display_num").unwrap().parse::<u16>().context("invalid display number")?;
 
     let host_ip = get_host_ip()?;
 
     let sa = SocketAddr::new(
-        host_ip
-            .parse::<IpAddr>()
-            .context("invalid host IP address")?,
+        host_ip.parse::<IpAddr>().context("invalid host IP address")?,
         DISPLAY_PORT_OFFSET + display_num,
     );
 
