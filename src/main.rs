@@ -4,7 +4,6 @@
 // parsing logic here too.
 
 use std::env;
-use std::fs::read as read_file;
 use std::io::{self, ErrorKind};
 use std::net::{IpAddr, SocketAddr, TcpStream};
 use std::process::exit;
@@ -17,19 +16,19 @@ const CONNECT_TIMEOUT: Duration = Duration::from_millis(500);
 const DISPLAY_PORT_OFFSET: u16 = 6000;
 
 fn get_host_ip() -> Result<String> {
-    let resolvconf = read_file("/etc/resolv.conf").context("failed to open /etc/resolv.conf")?;
+    let resolvconf = std::fs::read("/etc/resolv.conf").context("failed to open /etc/resolv.conf")?;
     let resolvconf = String::from_utf8(resolvconf).context("/etc/resolv.conf isn't valid utf8")?;
 
-    for line in resolvconf.lines() {
-        let words: Vec<_> = line.split_ascii_whitespace().collect();
-        if words.len() >= 2 && words[0] == "nameserver" {
-            return Ok(words[1].to_owned());
-        }
-    }
-
-    Err(anyhow!(
-        "unable to get host IP address from /etc/resolv.conf"
-    ))
+    resolvconf
+        .lines()
+        .find_map(|line| {
+            let mut words = line.split_ascii_whitespace();
+            match (words.next(), words.next()) {
+                (Some(ns), Some(ip)) if ns == "nameserver" => Some(ip.to_owned()),
+                (_, _) => None,
+            }
+        })
+        .ok_or_else(|| anyhow!("unable to get host IP address from /etc/resolv.conf"))
 }
 
 fn connect_error_ok(e: &io::Error) -> bool {
