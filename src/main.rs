@@ -4,7 +4,7 @@
 // parsing logic here too.
 
 use std::env;
-use std::io::{self, ErrorKind};
+use std::io::ErrorKind;
 use std::net::{IpAddr, SocketAddr, TcpStream};
 use std::process::exit;
 use std::time::Duration;
@@ -22,22 +22,14 @@ fn get_host_ip() -> Result<String> {
         .find_map(|line| {
             let mut words = line.split_ascii_whitespace();
             match (words.next(), words.next()) {
-                (Some(ns), Some(ip)) if ns == "nameserver" => Some(ip.to_owned()),
+                (Some("nameserver"), Some(addr)) => Some(addr.to_owned()),
                 (_, _) => None,
             }
         })
         .ok_or_else(|| anyhow!("unable to get host IP address from /etc/resolv.conf"))
 }
 
-fn connect_error_ok(e: &io::Error) -> bool {
-    match e.kind() {
-        ErrorKind::ConnectionRefused | ErrorKind::TimedOut => true,
-        _ => false,
-    }
-}
-
-fn real_main() -> Result<Option<String>> {
-    // bleh, I didn't want to have to pull in clap, but at least I turned off all the features
+fn run() -> Result<Option<String>> {
     let args = App::new("wsl2-get-display")
         .version(crate_version!())
         .max_term_width(80)
@@ -55,6 +47,7 @@ fn real_main() -> Result<Option<String>> {
     let display_num =
         args.value_of("display_num").unwrap().parse::<u16>().context("invalid display number")?;
 
+    // read /etc/resolv.conf and find the first nameserver, or return errors
     let host_ip = get_host_ip()?;
 
     let sa = SocketAddr::new(
@@ -66,17 +59,17 @@ fn real_main() -> Result<Option<String>> {
         // yay we connected. the socket will be closed when it goes out of scope and is dropped
         Ok(_) => Ok(Some(format!("{}:{}", host_ip, display_num))),
         // hide error messages for timeouts or connection refused or whatever
-        Err(e) if connect_error_ok(&e) => Ok(None),
+        Err(e) if matches!(e.kind(), ErrorKind::ConnectionRefused | ErrorKind::TimedOut) => {
+            Ok(None)
+        }
         // some other error, print that out
         Err(e) => Err(e.into()),
     }
 }
 
 fn main() {
-    match real_main() {
-        Ok(Some(s)) => {
-            println!("{}", s);
-        }
+    match run() {
+        Ok(Some(s)) => println!("{}", s),
         Ok(None) => exit(1),
         Err(e) => {
             eprintln!("Error: {:#}", e);
