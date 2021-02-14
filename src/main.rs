@@ -5,13 +5,13 @@
 
 use std::io::ErrorKind;
 use std::net::{IpAddr, SocketAddr, TcpStream};
+use std::num::ParseIntError;
 use std::process::exit;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
-use clap::{crate_version, App, Arg};
+use structopt::StructOpt;
 
-const DEFAULT_CONNECT_TIMEOUT_STR: &str = "500";
 const DISPLAY_PORT_OFFSET: u16 = 6000;
 
 fn get_host_ip() -> Result<String> {
@@ -28,47 +28,42 @@ fn get_host_ip() -> Result<String> {
         .ok_or_else(|| anyhow!("unable to get host IP address from /etc/resolv.conf"))
 }
 
+fn parse_duration(s: &str) -> Result<Duration, ParseIntError> {
+    Ok(Duration::from_millis(s.parse()?))
+}
+
+/// Find an X server running on the WSL2 host, and return a value for the DISPLAY environment
+/// variable.
+///
+/// wsl-get-display will infer the WSL2 hypervisor IP by finding the first nameserver in
+/// /etc/resolv.conf, then attempts a TCP connection on the appropriate port (6000
+/// + display_number)
+#[derive(Debug, StructOpt)]
+#[structopt(max_term_width = 80)]
+struct Args {
+    /// connection timeout in milliseconds
+    #[structopt(short, long, parse(try_from_str = parse_duration), default_value = "500")]
+    timeout: Duration,
+
+    /// X display number, e.g. the "1" in "localhost:1"
+    #[structopt(default_value = "1")]
+    display_number: u16,
+}
+
 fn run() -> Result<Option<String>> {
-    let args = App::new("wsl2-get-display")
-        .version(crate_version!())
-        .max_term_width(80)
-        .arg(
-            Arg::with_name("timeout")
-                .short("t")
-                .long("timeout")
-                .takes_value(true)
-                .default_value(DEFAULT_CONNECT_TIMEOUT_STR)
-                .help("connection timeout in milliseconds"),
-        )
-        .arg(
-            Arg::with_name("display_num")
-                .short("d")
-                .long("display-offset")
-                .takes_value(true)
-                .default_value("1")
-                .help("X display offset"),
-        )
-        .get_matches();
+    let args = Args::from_args();
 
-    // parse and validate display number. safe to unwrap because there's a default value
-    let display_num =
-        args.value_of("display_num").unwrap().parse::<u16>().context("invalid display number")?;
-
-    let timeout = Duration::from_millis(
-        args.value_of("timeout").unwrap().parse().context("invalid timeout number")?,
-    );
-
-    // read /etc/resolv.conf and find the first nameserver, or return errors
+    // read /etc/resolv.conf and find the first nameserver
     let host_ip = get_host_ip()?;
 
     let sa = SocketAddr::new(
         host_ip.parse::<IpAddr>().context("invalid host IP address")?,
-        DISPLAY_PORT_OFFSET + display_num,
+        DISPLAY_PORT_OFFSET + args.display_number,
     );
 
-    match TcpStream::connect_timeout(&sa, timeout) {
+    match TcpStream::connect_timeout(&sa, args.timeout) {
         // yay we connected. the socket will be closed when it goes out of scope and is dropped
-        Ok(_) => Ok(Some(format!("{}:{}", host_ip, display_num))),
+        Ok(_) => Ok(Some(format!("{}:{}", host_ip, args.display_number))),
         // hide error messages for timeouts or connection refused or whatever
         Err(e) if matches!(e.kind(), ErrorKind::ConnectionRefused | ErrorKind::TimedOut) => {
             Ok(None)

@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1"
-clap = { version = "2", default-features = false }
+structopt = { version = "0.3", default-features = false }
