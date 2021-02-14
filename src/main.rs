@@ -3,7 +3,6 @@
 // But since I gotta shell out to another binary anyway, I might as well add the /etc/resolv.conf
 // parsing logic here too.
 
-use std::env;
 use std::io::ErrorKind;
 use std::net::{IpAddr, SocketAddr, TcpStream};
 use std::process::exit;
@@ -12,7 +11,7 @@ use std::time::Duration;
 use anyhow::{anyhow, Context, Result};
 use clap::{crate_version, App, Arg};
 
-const CONNECT_TIMEOUT: Duration = Duration::from_millis(500);
+const DEFAULT_CONNECT_TIMEOUT_STR: &str = "500";
 const DISPLAY_PORT_OFFSET: u16 = 6000;
 
 fn get_host_ip() -> Result<String> {
@@ -34,6 +33,14 @@ fn run() -> Result<Option<String>> {
         .version(crate_version!())
         .max_term_width(80)
         .arg(
+            Arg::with_name("timeout")
+                .short("t")
+                .long("timeout")
+                .takes_value(true)
+                .default_value(DEFAULT_CONNECT_TIMEOUT_STR)
+                .help("connection timeout in milliseconds"),
+        )
+        .arg(
             Arg::with_name("display_num")
                 .short("d")
                 .long("display-offset")
@@ -47,6 +54,10 @@ fn run() -> Result<Option<String>> {
     let display_num =
         args.value_of("display_num").unwrap().parse::<u16>().context("invalid display number")?;
 
+    let timeout = Duration::from_millis(
+        args.value_of("timeout").unwrap().parse().context("invalid timeout number")?,
+    );
+
     // read /etc/resolv.conf and find the first nameserver, or return errors
     let host_ip = get_host_ip()?;
 
@@ -55,7 +66,7 @@ fn run() -> Result<Option<String>> {
         DISPLAY_PORT_OFFSET + display_num,
     );
 
-    match TcpStream::connect_timeout(&sa, CONNECT_TIMEOUT) {
+    match TcpStream::connect_timeout(&sa, timeout) {
         // yay we connected. the socket will be closed when it goes out of scope and is dropped
         Ok(_) => Ok(Some(format!("{}:{}", host_ip, display_num))),
         // hide error messages for timeouts or connection refused or whatever
