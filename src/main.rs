@@ -84,7 +84,7 @@ fn main() {
         Ok(None) => exit(1),
         Err(e) => {
             eprintln!("Error: {:#}", e);
-            exit(1);
+            exit(2);
         }
     };
 }
