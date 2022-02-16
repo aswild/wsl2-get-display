@@ -1,9 +1,9 @@
 [package]
 name = "wsl2-get-display"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["Allen Wild <allenwild93@gmail.com>"]
 edition = "2021"
 
 [dependencies]
 anyhow = "1"
-structopt = { version = "0.3", default-features = false }
+clap = { version = "3", features = ["cargo", "derive"] }

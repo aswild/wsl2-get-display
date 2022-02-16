@@ -13,13 +13,12 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
-use structopt::StructOpt;
+use clap::Parser;
 
 /// X11 port number is 6000 plus the display number
 const DISPLAY_PORT_OFFSET: u16 = 6000;
 
-/// Lazy global-variable debug logging. Use AtomicBool because accessing static mut variables is
-/// unsafe even though we're single-threaded.
+/// Lazy global-variable debug logging
 static DEBUG: AtomicBool = AtomicBool::new(false);
 macro_rules! debug {
     ($($args:tt),+) => {
@@ -38,28 +37,28 @@ fn parse_duration(s: &str) -> Result<Duration, ParseIntError> {
 /// wsl-get-display will infer the WSL2 hypervisor IP by finding the first nameserver in
 /// /etc/resolv.conf, then attempts a TCP connection on the appropriate port (6000
 /// + display_number)
-#[derive(Debug, StructOpt)]
-#[structopt(max_term_width = 80)]
+#[derive(Debug, Parser)]
+#[clap(max_term_width = 80)]
 struct Args {
     /// Connection timeout in milliseconds
-    #[structopt(short, long, parse(try_from_str = parse_duration), default_value = "500")]
+    #[clap(short, long, parse(try_from_str = parse_duration), default_value = "500")]
     timeout: Duration,
 
     /// Number of retries
-    #[structopt(short, long, default_value = "1")]
+    #[clap(short, long, default_value = "1")]
     retries: u16,
 
     /// Enables verbose debug output on stderr
-    #[structopt(short, long)]
+    #[clap(short, long)]
     verbose: bool,
 
     /// X display number, e.g. the "1" in "localhost:1"
-    #[structopt(default_value = "1")]
+    #[clap(default_value = "1")]
     display_number: u16,
 }
 
 fn run() -> Result<Option<String>> {
-    let args = Args::from_args();
+    let args = Args::parse();
     DEBUG.store(args.verbose, Ordering::Relaxed);
 
     // read /etc/resolv.conf, find the first nameserver, and parse it as an ip address
