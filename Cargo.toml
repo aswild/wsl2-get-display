@@ -1,9 +1,10 @@
 [package]
 name = "wsl2-get-display"
-version = "1.0.3"
+version = "1.1.0"
 authors = ["Allen Wild <allenwild93@gmail.com>"]
 edition = "2021"
 
 [dependencies]
 anyhow = "1"
 clap = { version = "3", features = ["cargo", "derive"] }
+serde_json = "1"
