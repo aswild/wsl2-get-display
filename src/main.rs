@@ -6,7 +6,6 @@
 use std::fs;
 use std::io::{Cursor, ErrorKind};
 use std::net::{IpAddr, SocketAddr, TcpStream};
-use std::num::ParseIntError;
 use std::process::{exit, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::sleep;
@@ -27,10 +26,6 @@ macro_rules! debug {
             eprintln!($($args),+);
         }
     };
-}
-
-fn parse_duration(s: &str) -> Result<Duration, ParseIntError> {
-    Ok(Duration::from_millis(s.parse()?))
 }
 
 /// Determine the host/hypervisor IP by reading the first nameserver from /etc/resolv.conf
@@ -121,7 +116,8 @@ fn host_ip_from_route() -> Result<IpAddr> {
 #[clap(version, max_term_width = 80)]
 struct Args {
     /// Connection timeout in milliseconds
-    #[clap(short, long, parse(try_from_str = parse_duration), default_value = "500")]
+    #[clap(short, long, default_value = "500")]
+    #[clap(value_parser = |s: &str| s.parse().map(Duration::from_millis))]
     timeout: Duration,
 
     /// Number of retries

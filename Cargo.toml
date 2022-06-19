@@ -6,5 +6,5 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1"
-clap = { version = "3", features = ["cargo", "derive"] }
+clap = { version = "3", features = ["cargo", "derive", "deprecated"] }
 serde_json = "1"
