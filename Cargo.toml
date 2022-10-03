@@ -1,10 +1,10 @@
 [package]
 name = "wsl2-get-display"
-version = "1.1.0"
+version = "1.1.1"
 authors = ["Allen Wild <allenwild93@gmail.com>"]
 edition = "2021"
 
 [dependencies]
 anyhow = "1"
-clap = { version = "3", features = ["cargo", "derive", "deprecated"] }
+clap = { version = "3.2", features = ["cargo", "derive", "deprecated"] }
 serde_json = "1"
