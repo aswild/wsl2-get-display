@@ -59,7 +59,7 @@ fn host_ip_from_resolv_conf() -> Result<IpAddr> {
 /// released in mid-2018, so a somewhat recent distro is needed.
 fn host_ip_from_route() -> Result<IpAddr> {
     let mut cmd = Command::new("ip");
-    cmd.args(&["-4", "-json", "route", "show", "default"])
+    cmd.args(["-4", "-json", "route", "show", "default"])
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit());
     let output = cmd.output().context("failed to execute {cmd:?}")?;
@@ -78,7 +78,7 @@ fn host_ip_from_route() -> Result<IpAddr> {
     // ]
     let js: Value = serde_json::from_reader(Cursor::new(&output.stdout))
         .context("failed to parse output as JSON")?;
-    debug!("{cmd:?} returned parsed data '{js}'");
+    debug!("{cmd:?} returned parsed data:\n{js:#?}");
 
     // unwrap inner object out of outer array
     let js = match js {
@@ -113,28 +113,28 @@ fn host_ip_from_route() -> Result<IpAddr> {
 /// /etc/resolv.conf, then attempts a TCP connection on the appropriate port (6000
 /// + display_number)
 #[derive(Debug, Parser)]
-#[clap(version, max_term_width = 80)]
+#[command(version, max_term_width = 80)]
 struct Args {
     /// Connection timeout in milliseconds
-    #[clap(short, long, default_value = "500")]
-    #[clap(value_parser = |s: &str| s.parse().map(Duration::from_millis))]
+    #[arg(short, long, default_value = "500")]
+    #[arg(value_parser = |s: &str| s.parse().map(Duration::from_millis))]
     timeout: Duration,
 
     /// Number of retries
-    #[clap(short, long, default_value = "1")]
+    #[arg(short, long, default_value = "1")]
     retries: u16,
 
     /// Enables verbose debug output on stderr
-    #[clap(short, long)]
+    #[arg(short, long)]
     verbose: bool,
 
     /// X display number, e.g. the "1" in "localhost:1"
-    #[clap(default_value = "1")]
+    #[arg(default_value = "1")]
     display_number: u16,
 
     /// Use /etc/resolv.conf to determine the host IP address rather than parsing the output of
     /// `ip route`
-    #[clap(short = 'R', long)]
+    #[arg(short = 'R', long)]
     resolv_conf: bool,
 }
 
