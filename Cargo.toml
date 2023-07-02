@@ -1,6 +1,6 @@
 [package]
 name = "wsl2-get-display"
-version = "1.1.1"
+version = "1.1.2"
 authors = ["Allen Wild <allenwild93@gmail.com>"]
 edition = "2021"
 
